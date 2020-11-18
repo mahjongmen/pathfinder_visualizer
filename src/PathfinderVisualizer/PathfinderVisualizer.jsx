@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
 import Node from './Node/Node';
+import {dijkstra,shortestPath} from '../algorithms/dijkstra'
 
 import './PathfinderVisualizer.css'
 const START_NODE_ROW=10;
@@ -15,6 +16,19 @@ export default class PathfinderVisualizer extends Component{
             grid:[],
             mouseIsPressed: false,
         };
+    }
+
+    // Invoked after a component is added into the tree
+    resetBoard(grid){
+        // Change all the class names 
+        for (const row of grid){
+            // Iterate through the nodes of each row
+            for (const node of row){
+                document.getElementById(`node-${node.row}-${node.col}`).className =
+              'node';
+            }
+        }   // Set the start node and the last node
+
     }
 
     // Invoked after a component is added into the tree
@@ -40,24 +54,59 @@ export default class PathfinderVisualizer extends Component{
         this.setState({mouseIsPressed: false});
     }
 
+    animateDijkstra(visitedNodesInOrder, nodesInShortestPathOrder) {
+        for (let i = 0; i <= visitedNodesInOrder.length; i++) {
+          if (i === visitedNodesInOrder.length) {
+            setTimeout(() => {
+              this.animateShortestPath(nodesInShortestPathOrder);
+            }, 10 * i);
+            return;
+          }
+          setTimeout(() => {
+            const node = visitedNodesInOrder[i];
+            document.getElementById(`node-${node.row}-${node.col}`).className =
+              'node node-visited';
+          }, 10 * i);
+        }
+      }
+    
+      animateShortestPath(nodesInShortestPathOrder) {
+        for (let i = 0; i < nodesInShortestPathOrder.length; i++) {
+          setTimeout(() => {
+            const node = nodesInShortestPathOrder[i];
+            document.getElementById(`node-${node.row}-${node.col}`).className =
+              'node node-shortest-path';
+          }, 50 * i);
+        }
+      }
+
+    visualizeDijkstra(){
+        const{grid}= this.state;
+        //Set the start nodes to send to the dijstra function 
+        const startNode = grid[START_NODE_ROW][START_NODE_COL];
+        const finishNode = grid[FINISH_NODE_ROW][FINISH_NODE_COL];
+        const visitedNodesInOrder=dijkstra(grid,startNode,finishNode);
+        // Can only be called once we have built a chained linkedlist from start to finish node 
+        const path = shortestPath(finishNode);
+        this.animateDijkstra(visitedNodesInOrder,path);
+    }
+
     render(){
-        const {grid}=this.state;
-        //const{grid, mouseIsPressed}=this.state;
-        // On reader, nodes will be a 15 x 50 grid of []
+        const{grid, mouseIsPressed}=this.state;
         return(
+            <><button onClick={()=> this.visualizeDijkstra()}>
+            Visualize Dijkstra's Algorithm
+            </button>
+            <button onClick={()=> this.resetBoard(grid)}>
+            Reset the Board 
+            </button>
             <div className="grid">
                 {grid.map((row, rowidx) => {
                     return( 
+                        
                         <div key={rowidx}>
                         {row.map((node, nodeidx) => {
-                            const{
-                                isStart, 
-                                isFinish,
-                                col,
-                                row,
-                                isWall,
-                                mouseIsPressed
-                            }=node;
+                            const{isStart, isFinish, col,row, isWall,mouseIsPressed,isReset}=node;
                             return (
                                 <Node
                                     key = {nodeidx}
@@ -66,15 +115,19 @@ export default class PathfinderVisualizer extends Component{
                                     isStart={isStart}
                                     isFinish={isFinish}
                                     isWall={isWall}
+                                    isReset={isReset}
                                     mouseIsPressed={mouseIsPressed}
-                                    test={'foo'}
-                                    test ={'kappa'}></Node>
+                                    onMouseDown={(row,col)=>this.handleMouseDown(row,col)}
+                                    onMouseEnter={(row,col)=>this.handleMouseEnter(row,col)}
+                                    onMouseUp={()=>this.handleMouseUp()}>
+                                    </Node>
                             );
                         })}
                     </div>
                 );
             })}
         </div>
+        </>
         );
     }
 }
@@ -104,6 +157,7 @@ export default class PathfinderVisualizer extends Component{
             distance: Infinity,
             isVisted: false,
             isWall: false,
+            isReset: true,
             previousNode: null,
         };
     };
